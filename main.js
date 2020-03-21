@@ -1,6 +1,6 @@
-const margin = ({top: 20, right: 20, bottom: 30, left: 20});
-const width = 1000;
-const height = 500;
+// const margin = ({top: 20, right: 20, bottom: 20, left: 20});
+const width = 920;
+const height = 450;
 
 const countries = {
   "จีน": "China",
@@ -16,6 +16,29 @@ const countries = {
   "เยอรมนี": "Germany",
 }
 
+const dodge_dist = 10;
+let dodge = (data) => {
+  let data_by_country = d3.nest().key(d => countries[d.country]).object(data);
+
+  let counts = {};
+  data.forEach((d, i) => {
+    let country = countries[d.country];
+    if (counts[country] != undefined) {
+      counts[country]++;
+    } else {
+      counts[country] = 0
+    }
+
+    let radius = (data_by_country[country].length - 1) * dodge_dist/2;
+    let angle = (counts[country] / data_by_country[country].length) * 2 * Math.PI;
+
+    [cx, cy] = path.centroid(features_by_name[country][0]);
+    data[i].xy = [cx + radius*Math.cos(angle), cy + radius*Math.sin(angle)]
+  });
+
+  return data;
+}
+
 function polygon(sides) {
   let length = sides*2;
   let s = 1;
@@ -24,7 +47,7 @@ function polygon(sides) {
   const radial = d3.lineRadial()
     .curve(d3.curveLinearClosed)
     .angle((_, i) => (i / length) * 2 * Math.PI + phase)
-    .radius((_, i) => (i % 2 === 0) ? s : s-5);
+    .radius((_, i) => (i % 2 === 0) ? s : s-dodge_dist/2);
 
   const poly = () => radial(Array.from({ length }));
   poly.context = (_) => arguments.length ? (radial.context(_), poly) : radial.context();
@@ -56,8 +79,9 @@ svg.append("g")
     .attr("stroke-linejoin", "round")
     .attr("d", path);
 
+const threshold = 100;
 d3.csv('data.csv').then(data => {
-  data = data.filter(d => d.infected > 100)
+  data = data.filter(d => d.infected > threshold)
 
   // TODO color for newness
   svg.append("g")
@@ -66,13 +90,13 @@ d3.csv('data.csv').then(data => {
       .attr("stroke", "#fff")
       .attr("stroke-width", 0.5)
     .selectAll("path")
-    .data(data)
+    .data(dodge(data))
     .join("path")
-      .attr("transform", d => `translate(${path.centroid(features_by_name[countries[d.country]][0])})`)
-      .attr("d", d => `${polygon(Math.floor(d.infected/100))
+      .attr("transform", d => `translate(${d.xy})`)
+      .attr("d", d => `${polygon(Math.floor(d.infected/threshold))
         // .curve(d3.curveCardinalClosed)
-        .scale(20)() //(Math.floor(d.data.infected/100))()
+        .scale(dodge_dist*2)() //(Math.floor(d.data.infected/threshold))()
       }`)
     .append("title")
-      .text(d => `${countries[d.country]}`);
+      .text(d => `เหตุการณ์ที่${d.location} เมือง${d.city} ประเทศ${d.country} เมื่อวันที่ ${d.date} มีผู้ติดเชื้อ ${d.infected} คน`);
 });

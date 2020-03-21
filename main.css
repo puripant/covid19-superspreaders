@@ -23,7 +23,11 @@ body {
   margin: 0;
 }
 
-.credit {
+#chart {
+  margin-left: -15vw;
+}
+
+/* .credit {
   font-size: 11px;
 }
 
@@ -77,4 +81,4 @@ body {
 .underlined.highlighted, .underlined:hover {
   border-bottom: 1px solid #1E1952;
   cursor: pointer;
-}
+} */
