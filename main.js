@@ -16,7 +16,7 @@ const countries = {
   "เยอรมนี": "Germany",
 }
 
-const dodge_dist = 10;
+const symbol_size = 15;
 let dodge = (data) => {
   let data_by_country = d3.nest().key(d => countries[d.country]).object(data);
 
@@ -29,8 +29,9 @@ let dodge = (data) => {
       counts[country] = 0
     }
 
-    let radius = (data_by_country[country].length - 1) * dodge_dist/2;
-    let angle = (counts[country] / data_by_country[country].length) * 2 * Math.PI;
+    let n = data_by_country[country].length;
+    let radius = (n === 1) ? 0 : 0.8*symbol_size * Math.sqrt(2 / (1-Math.cos(2*Math.PI/n))); // from cosine law
+    let angle = (counts[country] / n) * 2*Math.PI;
 
     [cx, cy] = path.centroid(features_by_name[country][0]);
     data[i].xy = [cx + radius*Math.cos(angle), cy + radius*Math.sin(angle)]
@@ -47,7 +48,7 @@ function polygon(sides) {
   const radial = d3.lineRadial()
     .curve(d3.curveLinearClosed)
     .angle((_, i) => (i / length) * 2 * Math.PI + phase)
-    .radius((_, i) => (i % 2 === 0) ? s : s-dodge_dist/2);
+    .radius((_, i) => (i % 2 === 0) ? s : s-5);
 
   const poly = () => radial(Array.from({ length }));
   poly.context = (_) => arguments.length ? (radial.context(_), poly) : radial.context();
@@ -76,12 +77,13 @@ svg.append("g")
   .join("path")
     .attr("fill", "gainsboro")
     .attr("stroke", "white")
+    .attr("stroke-width", "0.5")
     .attr("stroke-linejoin", "round")
     .attr("d", path);
 
-const threshold = 100;
+const threshold = 1;
 d3.csv('data.csv').then(data => {
-  data = data.filter(d => d.infected > threshold)
+  data = data.filter(d => d.infected > threshold*2)
 
   // TODO color for newness
   svg.append("g")
@@ -95,7 +97,7 @@ d3.csv('data.csv').then(data => {
       .attr("transform", d => `translate(${d.xy})`)
       .attr("d", d => `${polygon(Math.floor(d.infected/threshold))
         // .curve(d3.curveCardinalClosed)
-        .scale(dodge_dist*2)() //(Math.floor(d.data.infected/threshold))()
+        .scale(symbol_size)() //(Math.floor(d.data.infected/threshold))()
       }`)
     .append("title")
       .text(d => `เหตุการณ์ที่${d.location} เมือง${d.city} ประเทศ${d.country} เมื่อวันที่ ${d.date} มีผู้ติดเชื้อ ${d.infected} คน`);
